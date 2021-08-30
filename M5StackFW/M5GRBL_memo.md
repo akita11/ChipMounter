@@ -25,19 +25,20 @@ Internal variables of [M5StackのGRBL](https://docs.m5stack.com/en/module/grbl13
 ## 内部変数の補足
 
 - $6 (step port invert mask): X,Y,Z軸の正の向きを反転させる指定。config.hに各軸のビットが指定されているので、1をこれだけビットシフトしたものの論理和として指定する。例えばX,Z軸を反転させるなら、1<<5=32(0x20)と1<<7=128(0x80)の論理和である160(0xa0)とすればよい。
-'''
+```
 #define X_DIRECTION_BIT    5  // Uno Digital Pin 5
 #define Y_DIRECTION_BIT    6  // Uno Digital Pin 6
 #define Z_DIRECTION_BIT    7  // Uno Digital Pin 7
-'''
+```
 
 - $15 (invert ST): これを1にすると、モータの動作／停止が逆になる。（何に使うのかよくわからない）
 - $17 (enable homing): これが1だと、初期化時のホーミング（原点復帰）を必須、つまり、リセット後にまずは$Hコマンドでホーミングを行わないと、他の動作はできない。
 
 - $18 (settings.homing_dir_mask): $6と同様に、ホーミング動作の向きを指定する。一般には各軸の正の向きとホーミングの向きは逆なので、各軸を反転させることになる。
 
+# 各軸の速度 ($4や$5など)
 
-# 各軸の速度 ($4や$5など): 本来は各軸で同じになるはずだが、$0-$2で各軸のstep/mmが異なるとき、各軸が違う速度になる気がする（速度を大きな値、step/mmを大きな値にすると、脱調する）。ソースコードを読んでも、原因はよくわからず。
+本来は各軸で同じになるはずだが、$0-$2で各軸のstep/mmが異なるとき、各軸が違う速度になる気がする（速度を大きな値、step/mmを大きな値にすると、脱調する）。ソースコードを読んでも、原因はよくわからず。
 
 ## I2Cバッファ
 
@@ -45,7 +46,7 @@ M5Stack GRBLとM5Stackとの通信はI2C。マスタ(M5Stack)からI2C読み出�
 
 なお、GRBLのライブラリ中のGrblControl.cpp の ReadStatus() は、でdataの末尾に'\0'が付加されないのはたぶんバグなので、以下のように修正すべき。
 ReadStatus() in GrblControl.cpp should be corrected as follows to add terminator of '\0' at end of data.
-'''
+```
 String GRBL::ReadLine() {
     String Data = ""; 
     while(1){
@@ -64,8 +65,7 @@ String GRBL::ReadLine() {
     }
     return Data;
 }
-'''
-
+```
 ## Gコード・GRBLの一般的な情報
 
 - https://bbs.avalontech.jp/t/grbl-g/750/3
