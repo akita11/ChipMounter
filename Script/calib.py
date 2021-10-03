@@ -13,7 +13,6 @@ import numpy as np
 
 # create "mainwindow.py" from "mainwindow.ui" using m.bat after editting "mainwindow.ui"
 
-
 class PickerCalib(QMainWindow):
     global config, config_org
 
@@ -35,7 +34,6 @@ class PickerCalib(QMainWindow):
         self.img_size = [0, 0]
         self.window_size = [self.ui.labelView.geometry().width(), self.ui.labelView.geometry().height()]
         self.mag = [1, 1]
-
 #        print(config)
 #        print(config_org)
         # initialize tray list
@@ -299,6 +297,7 @@ class PickerCalib(QMainWindow):
         sys.exit()
 
     def onSave(self):
+        '''
         for trayID in config["Tray"]:
             config["Tray"][trayID]["Area"]["Component"]["Lower"] = int(self.ui.plainTextEditAreaCompL.toPlainText())
             config["Tray"][trayID]["Area"]["Component"]["Upper"] = int(self.ui.plainTextEditAreaCompU.toPlainText())
@@ -322,7 +321,7 @@ class PickerCalib(QMainWindow):
             config["Tray"][trayID]["Corner"]["Real"]["LowerLeft"][1] = float(self.ui.plainTextEditPosReal4Y.toPlainText())
             config["Tray"][trayID]["Camera"][0] = float(self.ui.plainTextEditPosCameraX.toPlainText())
             config["Tray"][trayID]["Camera"][1] = float(self.ui.plainTextEditPosCameraY.toPlainText())
-
+        '''
         config["HSV_Range"]["Back"]["Upper"]["H"] = self.ui.horizontalSliderHU1.value()
         config["HSV_Range"]["Back"]["Lower"]["H"] = self.ui.horizontalSliderHL1.value()
         config["HSV_Range"]["Back"]["Upper"]["S"] = self.ui.horizontalSliderSU1.value()
@@ -364,8 +363,9 @@ class PickerCalib(QMainWindow):
                 self.draw_cross(float(self.ui.plainTextEditPosCamera3X.toPlainText()), float(self.ui.plainTextEditPosCamera3Y.toPlainText()), self.CornerMarkColor)
                 self.draw_cross(float(self.ui.plainTextEditPosCamera4X.toPlainText()), float(self.ui.plainTextEditPosCamera4Y.toPlainText()), self.CornerMarkColor)
                 self.DrawPixmap()
-                config["Tray"][self.trayID]["MatrixToImage"] = picker.calc_transform_to_image(self.trayID).tolist()
-                config["Tray"][self.trayID]["MatrixToReal"] = picker.calc_transform_to_real(self.trayID).tolist()
+                #config["Tray"][self.trayID]["MatrixToImage"] = picker.calc_transform_to_image(self.trayID).tolist()
+                #config["Tray"][self.trayID]["MatrixToReal"] = picker.calc_transform_to_real(self.trayID).tolist()
+            
             elif self.img_type == 1:
                 # back digitized
                 self.image = QImage(picker.digitize(self.img, config["HSV_Range"]["Back"]).data, self.img.shape[1], self.img.shape[0], QImage.Format_Grayscale8)

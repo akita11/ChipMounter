@@ -23,10 +23,13 @@ udpSock.settimeout(1)
 def wait_motion():
     if fNoSerial == False:
         finish = False
-        while finish == False:
+        count = 0
+        #while finish == False:
+        while count < 2: # check 2 times of "IDLE" to avoid incorrect motion end detection
             ser.write(b'@\n')
             line = "init"
-            while finish == False and len(line) != 0:
+            #while finish == False and len(line) != 0:
+            while count < 2 and len(line) != 0:
                 #line = ser.readline().decode()
                 line0 = ser.readline()
                 try:
@@ -36,8 +39,10 @@ def wait_motion():
                     pass
                 else:
                     finish = 'IDLE' in line
-                    #print(finish)
-                    time.sleep(0.1)
+                    if finish == True:
+                        count = count + 1
+                    time.sleep(0.01)
+    print("-> done")
     return
 
 
@@ -47,7 +52,8 @@ def send_cmd(cmd):
         s = cmd.encode()
         ser.write(s)
         if s[0] == 77: # 'M'
-            time.sleep(0.2)
+            #time.sleep(0.2)
+            time.sleep(0.01)
         else:    
             wait_motion()
 

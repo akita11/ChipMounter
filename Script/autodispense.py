@@ -21,8 +21,10 @@ sx, sy = (99.06, 88.9)
 # PCB left-side corner on Base
 bx0, by0 = (0, 200)
 
-head_offset = (39, -2)
+head_offset = (37.5, -1.5)
 board_offset = (90, 0)
+
+# dispenser origin = (52.5, 201.5)
 
 r = csv.reader(open(filename))
 n = 0
@@ -33,13 +35,14 @@ row_sorted = sorted(rows, key=operator.itemgetter(0)) # sort by 1st (x)
 
 picker.move_Z(150) # initial position
 
-for row in row_sorted:
+#for row in row_sorted:
+for row in rows:
     tx = row[0] - x0 + bx0 + board_offset[0] - head_offset[0]
-    ty = row[1] - y0 + by0 + board_offset[1] - head_offset[1]
+    ty = -row[1] - y0 + by0 + board_offset[1] - head_offset[1]
     sx = row[2]
     sy = row[3]
     area = sx * sy
-    #print(tx,ty)
+    #print(row[0], row[1], tx,ty)
     picker.dispense(tx, ty, area)
 
 picker.move_Z(150)

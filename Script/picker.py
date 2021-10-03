@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import math
 from socket import *
+import time
 
 # physical limit
 Xlimit = [0, 240]
@@ -29,6 +30,9 @@ udpSock.settimeout(1)
 cap = ""
 Ncap = 0
 
+A2image = {}
+A2real = {}
+
 def load_config(filename = 'config.txt') :
 #def load_config(filename) :
     global config, pos_r, pos_c, pos_r_o, pos_c_o, pos_r_e, pos_c_e, cap
@@ -41,6 +45,13 @@ def load_config(filename = 'config.txt') :
     #cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'));
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  config["Camera"]["Pixel"][0])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config["Camera"]["Pixel"][1])
+
+    for trayID in config["Tray"]:
+        A2image[trayID] = calc_transform_to_image(trayID).tolist()
+        A2real[trayID] = calc_transform_to_real(trayID).tolist()
+        #print(trayID, A2image[trayID])
+        #print(trayID, A2real[trayID])
+
     return config
 
 def save_config(data, filename = 'config.txt'):
@@ -85,7 +96,8 @@ def capture(fCapture, trayID, fWarp = False):
         img_src = cv2.imread('raw.png', 1)
     if (fWarp == True):
         # perform warp perspective
-        img_src = cv2.warpPerspective(img_src, np.array(config["Tray"][trayID]["MatrixToImage"]), config["Camera"]["Pixel"])
+        #img_src = cv2.warpPerspective(img_src, np.array(config["Tray"][trayID]["MatrixToImage"]), config["Camera"]["Pixel"])
+        img_src = cv2.warpPerspective(img_src, np.array(A2image[trayID]), config["Camera"]["Pixel"])
 
     return(img_src)
 
@@ -147,18 +159,21 @@ def pick(x, y, angle):
     move_XY(x, y)
     move_Z(config["Physical"]["Height"]["Pick"])
     intake_control(True)
+    time.sleep(0.2)
     move_Z(config["Physical"]["Height"]["Motion"])
     rotate_head(angle_to_horizontal(angle))
 
 def place(x, y, angle):
-    print("place ({0:.2f}, {1:.2f} / {2:.2f})".format(x, y, angle))
+    #print("place ({0:.2f}, {1:.2f} / {2:.2f})".format(x, y, angle))
     move_XY(x, y)
     rotate_head(angle)
     move_Z(config["Physical"]["Height"]["Place"])
     intake_control(False)
     exhaust_control(True)
+    time.sleep(0.2)
     exhaust_control(False)
-    move_Z(config["Physical"]["Height"]["Motion"])
+    #move_Z(config["Physical"]["Height"]["Motion"])
+    move_Z(config["Camera"]["Height"])
 
 def digitize(img, HSV_Range):
     # convert H=(0:180) to (0:360), S&V=(0:100) to (0:255)
@@ -244,7 +259,8 @@ def pos_transform_to(Aconv, pos, pos_from_o, pos_to_o):
 def pos_transform_to_real(trayID, pos):
     # image -> real
     width, height = config["Camera"]["Pixel"]
-    return pos_transform_to(config["Tray"][trayID]["MatrixToReal"], pos,
+    #return pos_transform_to(config["Tray"][trayID]["MatrixToReal"], pos,
+    return pos_transform_to(A2real[trayID], pos,
                             [width/2, height/2],
                             [(config["Tray"][trayID]['Corner']['Real']['UpperLeft'][0] +
                               config["Tray"][trayID]['Corner']['Real']['UpperRight'][0] +
@@ -259,7 +275,8 @@ def pos_transform_to_real(trayID, pos):
 def pos_transform_to_image(trayID, pos):
     # camera -> image
     width, height = config["Camera"]["Pixel"]
-    return pos_transform_to(config["Tray"][trayID]["MatrixToImage"], pos,
+    #return pos_transform_to(config["Tray"][trayID]["MatrixToImage"], pos,
+    return pos_transform_to(A2image[trayID], pos,
                             [0, 0], [0, 0])
 
 def move_camera(tray):
@@ -285,18 +302,21 @@ def find_component(trayID, margin=0):
     #    img = capture(True, config['Camera']['ID'], trayID)
     img = capture(True, config['Camera']['ID'], trayID)
     cmp, img_ext = create_component_list(img, trayID, margin)
-    cv2.imwrite('ext{0:d}.png'.format(Ncap), img_ext)
+    #cv2.imwrite('ext{0:d}.png'.format(Ncap), img_ext)
     return(cmp)
     
     
 def create_component_list(img, trayID, tray_margin = 0):
-    img_rect = cv2.warpPerspective(img, np.array(config["Tray"][trayID]["MatrixToImage"]), config["Camera"]["Pixel"])
+    #img_rect = cv2.warpPerspective(img, np.array(config["Tray"][trayID]["MatrixToImage"]), config["Camera"]["Pixel"])
+    img_rect = cv2.warpPerspective(img, np.array(A2image[trayID]), config["Camera"]["Pixel"])
     areaL, areaU = config["Tray"][trayID]["Area"]["Component"]["Lower"], config["Tray"][trayID]["Area"]["Component"]["Upper"]
     # area threshold for black area
     areaLB, areaUB = config["Tray"][trayID]["Area"]["Black"]["Lower"], config["Tray"][trayID]["Area"]["Black"]["Upper"] 
     height, width, channel = img.shape
     img_mask = 255 - digitize(img_rect, config["HSV_Range"]["Back"])
+    #cv2.imwrite('mask{0:d}.png'.format(Ncap), img_mask)
     img_ext = cv2.bitwise_and(img_rect, img_rect, mask=img_mask)
+    #cv2.imwrite('ext_{0:d}.png'.format(Ncap), img_ext)
     img_maskB = digitize(img_rect, config["HSV_Range"]["Black"])
     img_black = cv2.bitwise_and(img_mask, img_maskB)
     #--------------------------------------
@@ -384,19 +404,19 @@ def create_component_list(img, trayID, tray_margin = 0):
 
         prx, pry = pos_transform_to_real(trayID, [px, py])
         # store in compnent list in each tray
+        #print(prx, pry, tray_xs, tray_xe, tray_ys, tray_ye, tray_margin)
         if tray_xs + tray_margin <= prx <= tray_xe - tray_margin and tray_ys + tray_margin <= pry <= tray_ye - tray_margin:
             cmp.append([prx, pry, angD, fFront])
         
-    #cv2.imwrite("ext.png", img_ext)
     return(cmp, img_ext)
 
 def move_dispense(d):
     send_cmd('G0B{:.2f}'.format(d))
     
-Zdispense = 86      # Z at dispense
-Zdispense_move = 120 # Z at move
-Aextrude = 1.5      # coefficient of extrude per area[mm2]
-Aback = 0.5
+Zdispense = 85      # Z at dispense
+Zdispense_move = 100 # Z at move
+Aextrude = 0.5      # coefficient of extrude per area[mm2]
+Aback = 0.3
 
 def dispense(x, y, area):
     # dispense solder at (x, y), pad area of "area"
@@ -406,5 +426,5 @@ def dispense(x, y, area):
     move_XY(x, y)
     move_Z(Zdispense)
     move_dispense(extrude)
-    move_dispense(back)
+    move_dispense(-back)
     move_Z(Zdispense_move)
