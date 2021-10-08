@@ -155,7 +155,8 @@ def angle_to_horizontal(theta):
     
 def pick(x, y, angle):
     print("pick ({0:.2f}, {1:.2f} / {2:.2f})".format(x, y, angle))
-    move_Z(config["Physical"]["Height"]["Motion"])
+    #move_Z(config["Physical"]["Height"]["Motion"])
+    move_Z(config["Camera"]["Height"])
     move_XY(x, y)
     move_Z(config["Physical"]["Height"]["Pick"])
     intake_control(True)

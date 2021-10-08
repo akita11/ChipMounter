@@ -29,6 +29,13 @@ bx0, by0 = (0, 200)
 top_side = True
 #top_side = False
 
+# specify target area on PCB (-1 if no specify)
+xmin = -1
+xmax = 45
+ymin = -1
+ymax = -1
+
+
 r = csv.reader(open(filename))
 n = 0
 
@@ -58,45 +65,55 @@ def ask_component_check(trayID):
 for row in row_sorted:
     #ref = row[0]
     #val = row[1]
-    tx = float(row[0]) - x0 + bx0
-    ty = float(row[1]) - y0 + by0
+    tx0 = float(row[0]) - x0 + bx0
+    ty0 = float(row[1]) - y0 + by0
     tang = float(row[2])
     side = row[3]
     if side == 'bottom':
         tx = sx - tx
         tang = -tang
     tray = int(row[4])
-    frontside = int(row[5])
-    if (top_side == True and side == 'top') or (top_side == False and side == 'bottom'):
-        if tray > 0:
+    frontside = int(row[5]) # 0=both side, 1=top only, 2=in tape
+    if ((xmin != -1 and tx0 >= xmin) or (xmin == -1)) and ((xmax != -1 and tx0 <= xmax) or (xmax == -1)) and ((ymin != -1 and ty0 >= ymin) or (ymin == -1)) and ((ymax != -1 and ty0 <= ymax) or (ymax == -1)) and tray > 0:
+        tx = tx0 - x0 + bx0
+        ty = ty0 - y0 + by0
+        if (top_side == True and side == 'top') or (top_side == False and side == 'bottom'):
             trayID = str(tray)
-            #print("moving")
-            picker.move_camera(trayID)
-            #input("Press Enter when camera ready")
-            #print("done")
-            #print("finding components")
-            tray_margin = 1.0 # [mm]
-            fPlaced = False
-            while fPlaced == False:
-                cmp = picker.find_component(trayID, tray_margin)
-                if len(cmp) == 0:
-                    print("no componet in tray {0:s}".format(trayID))
-                    ask_component_check(trayID)
-                else:
-                    while fPlaced == False:
-                        print("{0:d} componets in tray {1:s}".format(len(cmp), trayID))
-                        for cmpt in cmp:
-                            if fPlaced == False:
-                                if frontside == 0 or (frontside == 1 and cmpt[3] == True):
-                                    print("tray{0:d} / ({1:.2f} {2:.2f} / {3:.2f}) -> ({4:.2f}, {5:.2f}) / {6:.1f}".format(tray, cmpt[0], cmpt[1], cmpt[2], tx, ty, tang))
-                                    picker.pick(cmpt[0], cmpt[1], cmpt[2])
-                                    picker.place(tx, ty, tang)
-                                    fPlaced = True
-                        if fPlaced == False:
-                            # found components, but no available components
-                            print("no available componet in tray {0:s}".format(trayID))
-                            ask_component_check(trayID)
-                            cmp = picker.find_component(trayID, tray_margin)
+            if frontside == 2:
+                # no camera, component is assumed to be placed at center of the tray
+                px = (config["Tray"][trayID]["Corner"]["Real"]["UpperLeft"][0] + config["Tray"][trayID]["Corner"]["Real"]["UpperRight"][0] + config["Tray"][trayID]["Corner"]["Real"]["LowerRight"][0] + config["Tray"][trayID]["Corner"]["Real"]["LowerLeft"][0]) / 4
+                py = (config["Tray"][trayID]["Corner"]["Real"]["UpperLeft"][1] + config["Tray"][trayID]["Corner"]["Real"]["UpperRight"][1] + config["Tray"][trayID]["Corner"]["Real"]["LowerRight"][1] + config["Tray"][trayID]["Corner"]["Real"]["LowerLeft"][1]) / 4
+                pa = 0 # angle is assumed to be 0
+                picker.pick(px, py, pa)
+                picker.place(tx, ty, tang)
+            else:
+                #print("moving")
+                picker.move_camera(trayID)
+                #input("Press Enter when camera ready")
+                #print("done")
+                #print("finding components")
+                tray_margin = 1.0 # [mm]
+                fPlaced = False
+                while fPlaced == False:
+                    cmp = picker.find_component(trayID, tray_margin)
+                    if len(cmp) == 0:
+                        print("no componet in tray {0:s}".format(trayID))
+                        ask_component_check(trayID)
+                    else:
+                        while fPlaced == False:
+                            print("{0:d} componets in tray {1:s}".format(len(cmp), trayID))
+                            for cmpt in cmp:
+                                if fPlaced == False:
+                                    if frontside == 0 or (frontside == 1 and cmpt[3] == True):
+                                        print("tray{0:d} / ({1:.2f} {2:.2f} / {3:.2f}) -> ({4:.2f}, {5:.2f}) / {6:.1f}".format(tray, cmpt[0], cmpt[1], cmpt[2], tx, ty, tang))
+                                        picker.pick(cmpt[0], cmpt[1], cmpt[2])
+                                        picker.place(tx, ty, tang)
+                                        fPlaced = True
+                                        if fPlaced == False:
+                                            # found components, but no available components
+                                            print("no available componet in tray {0:s}".format(trayID))
+                                            ask_component_check(trayID)
+                                            cmp = picker.find_component(trayID, tray_margin)
                         
 picker.move_Z(200)
 picker.move_XY(0, 220)
