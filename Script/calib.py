@@ -79,7 +79,7 @@ class PickerCalib(QMainWindow):
         self.ui.radioButtonBack.clicked.connect(self.onSelectBack)
         self.ui.radioButtonBlack.clicked.connect(self.onSelectBlack)
         self.ui.radioButtonComponent.clicked.connect(self.onSelectComponent)
-        self.ui.radioButtonComponentChk.clicked.connect(self.onSelectComponentChk)
+        self.ui.pushButtonCheckCmp.clicked.connect(self.onSelectComponentChk)
         self.ui.pushButtonMoveTrayCorner1.clicked.connect(self.onMoveTrayCorner1)
         self.ui.pushButtonMoveTrayCorner2.clicked.connect(self.onMoveTrayCorner2)
         self.ui.pushButtonMoveTrayCorner3.clicked.connect(self.onMoveTrayCorner3)
@@ -96,7 +96,14 @@ class PickerCalib(QMainWindow):
         self.ui.horizontalSliderVL1.valueChanged.connect(self.onVL1_Changed)
         self.ui.horizontalSliderVU2.valueChanged.connect(self.onVU2_Changed)
         self.ui.horizontalSliderVL2.valueChanged.connect(self.onVL2_Changed)
-       
+        self.ui.pushButtonMoveDispenerHeadX.clicked.connect(self.onMoveSetDispenserHeadOffsetX)
+        self.ui.pushButtonMoveDispenerHeadY.clicked.connect(self.onMoveSetDispenserHeadOffsetY)
+        self.ui.pushButtonMoveDispenerHeadZ.clicked.connect(self.onMoveSetDispenserHeadOffsetZ)
+
+        self.ui.pushButtonTrayAutoCalcFrom1.clicked.connect(self.onTrayAutoCalcFrom1)
+        self.ui.plainTextEditDispenserOffsetX.setPlainText(str(config["Physical"]["DispenserHeadOffset"][0]))
+        self.ui.plainTextEditDispenserOffsetY.setPlainText(str(config["Physical"]["DispenserHeadOffset"][1]))
+        self.ui.plainTextEditDispenserOffsetZ.setPlainText(str(config["Physical"]["DispenserHeadOffset"][2]))
         self.show()
 
     def update_tray_info(self, trayID):
@@ -233,10 +240,20 @@ class PickerCalib(QMainWindow):
         #picker.move_Z(15) # 3mm for position calibaration with base board
 
     def onMoveUp(self):
-        picker.move_Z(600)
+        picker.move_Z(50)
+        if (self.corner == 0):
+            picker.move_Y(30)
+        elif self.corner == 1:
+            picker.move_Y(30)
+        elif self.corner == 2:
+            picker.move_Y(225)
+        else:
+            picker.move_Y(225)
 
+        
     # move to base corner
     def onMoveNextBaseCorner(self):
+        self.corner = (self.corner + 1) % 4
         print("move to base corner"+str(self.corner))
         if (self.corner == 0):
             self.DrawCrossOnBase(0, 0)
@@ -248,7 +265,6 @@ class PickerCalib(QMainWindow):
 #            self.DrawCrossOnBase(230, 195) # for height calibration without base board
         else:
             self.DrawCrossOnBase(5, 195)
-        self.corner = (self.corner + 1) % 4
 
     # move to tray
     def onMoveTrayCamera(self):
@@ -293,7 +309,7 @@ class PickerCalib(QMainWindow):
         
     # system
     def onQuit(self):
-        picker.light_control(False)
+        #picker.light_control(False)
         sys.exit()
 
     def onSave(self):
@@ -415,19 +431,52 @@ class PickerCalib(QMainWindow):
     def onGetTrayCamera2(self):
         self.ui.plainTextEditPosCamera2X.setPlainText(str(self.mouseX))
         self.ui.plainTextEditPosCamera2Y.setPlainText(str(self.mouseY))
-        config["Tray"][self.trayID]["Corner"]["Camera"]["UpperRight"][0] = float(self.ui.plainTextEditPosCamera1X.toPlainText())
-        config["Tray"][self.trayID]["Corner"]["Camera"]["UpperRight"][1] = float(self.ui.plainTextEditPosCamera1Y.toPlainText())
+        config["Tray"][self.trayID]["Corner"]["Camera"]["UpperRight"][0] = float(self.ui.plainTextEditPosCamera2X.toPlainText())
+        config["Tray"][self.trayID]["Corner"]["Camera"]["UpperRight"][1] = float(self.ui.plainTextEditPosCamera2Y.toPlainText())
     def onGetTrayCamera3(self):
         self.ui.plainTextEditPosCamera3X.setPlainText(str(self.mouseX))
         self.ui.plainTextEditPosCamera3Y.setPlainText(str(self.mouseY))
-        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerRight"][0] = float(self.ui.plainTextEditPosCamera1X.toPlainText())
-        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerRight"][1] = float(self.ui.plainTextEditPosCamera1Y.toPlainText())
+        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerRight"][0] = float(self.ui.plainTextEditPosCamera3X.toPlainText())
+        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerRight"][1] = float(self.ui.plainTextEditPosCamera3Y.toPlainText())
     def onGetTrayCamera4(self):
         self.ui.plainTextEditPosCamera4X.setPlainText(str(self.mouseX))
         self.ui.plainTextEditPosCamera4Y.setPlainText(str(self.mouseY))
-        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerLeft"][0] = float(self.ui.plainTextEditPosCamera1X.toPlainText())
-        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerLeft"][1] = float(self.ui.plainTextEditPosCamera1Y.toPlainText())
+        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerLeft"][0] = float(self.ui.plainTextEditPosCamera4X.toPlainText())
+        config["Tray"][self.trayID]["Corner"]["Camera"]["LowerLeft"][1] = float(self.ui.plainTextEditPosCamera4Y.toPlainText())
+        
+    def onMoveSetDispenserHeadOffsetX(self):
+        # X-offset = X at touching upper-left corner of board
+        off = float(self.ui.plainTextEditDispenserOffsetX.toPlainText())
+        picker.move_X(off)
+        config["Physical"]["DispenserHeadOffset"][0] = off
 
+    def onMoveSetDispenserHeadOffsetY(self):
+        # Y-offset = Y at touching upper-left corner of board
+        off = float(self.ui.plainTextEditDispenserOffsetY.toPlainText())
+        picker.move_Y(200 + off)
+        config["Physical"]["DispenserHeadOffset"][1] = off
+    def onMoveSetDispenserHeadOffsetZ(self):
+        # Z-offset = Z at touching surface of base
+        off = float(self.ui.plainTextEditDispenserOffsetZ.toPlainText())
+        picker.move_Z(off)
+        config["Physical"]["DispenserHeadOffset"][2] = off
+
+    def onTrayAutoCalcFrom1(self):
+        for tr in range(2, 13):
+            trs = str(tr)
+            tray_pitch = (36, 29)
+            config["Tray"][trs]["Corner"]["Camera"] = config["Tray"]["1"]["Corner"]["Camera"]
+            x = (tr - 1) % 6
+            y = int((tr - 1) / 6)
+            config["Tray"][trs]["Corner"]["Real"]["UpperLeft"][0] = config["Tray"]["1"]["Corner"]["Real"]["UpperLeft"][0] + tray_pitch[0] * x
+            config["Tray"][trs]["Corner"]["Real"]["UpperRight"][0] = config["Tray"]["1"]["Corner"]["Real"]["UpperRight"][0] + tray_pitch[0] * x
+            config["Tray"][trs]["Corner"]["Real"]["LowerRight"][0] = config["Tray"]["1"]["Corner"]["Real"]["LowerRight"][0] + tray_pitch[0] * x
+            config["Tray"][trs]["Corner"]["Real"]["LowerLeft"][0] = config["Tray"]["1"]["Corner"]["Real"]["LowerLeft"][0] + tray_pitch[0] * x
+            config["Tray"][trs]["Corner"]["Real"]["UpperLeft"][1] = config["Tray"]["1"]["Corner"]["Real"]["UpperLeft"][1] + tray_pitch[1] * y
+            config["Tray"][trs]["Corner"]["Real"]["UpperRight"][1] = config["Tray"]["1"]["Corner"]["Real"]["UpperRight"][1] + tray_pitch[1] * y
+            config["Tray"][trs]["Corner"]["Real"]["LowerRight"][1] = config["Tray"]["1"]["Corner"]["Real"]["LowerRight"][1] + tray_pitch[1] * y
+            config["Tray"][trs]["Corner"]["Real"]["LowerLeft"][1] = config["Tray"]["1"]["Corner"]["Real"]["LowerLeft"][1] + tray_pitch[1] * y
+            
 if __name__=="__main__":
     config = picker.load_config()
     #config_org = config.copy()

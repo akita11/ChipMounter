@@ -15,10 +15,11 @@ lines = f.readlines()
 state = 0
 areaR = {}
 
+n = 0
 for line in lines:
-    #print(state, line)
+    #print(n,state, line)
+    #n = n + 1
     if state == 0 and line.startswith("%AD"):
-        # note: assuming Rectangular aperture ('R')
         lineR = line.replace('%AD', '').replace("R","").replace("C","").replace("X"," ").replace(","," ").replace("*", " ")
         pos = lineR.split(" ")
         if line.find('C') == -1:
@@ -33,7 +34,10 @@ for line in lines:
         line = line.replace('*', '').replace("\n", "")
         ap = line.replace("\r", "")
     elif line.startswith("X"):
-        line = line.replace('X', ' ').replace("Y"," ").replace("D"," ").replace("*", " ")
+#        line = line.replace('X', ' ').replace("Y"," ").replace("D"," ").replace("*", " ")
+        # note: assuming Rectangular aperture ('R')
+        line = line.replace('X', ' ').replace("Y"," ").replace("D"," ").replace("*", " ").replace("I", " ").replace("J", " ")
+
         pos = line.split(" ")
         posx = float(pos[1]) / 1000000.0
         posy = float(pos[2]) / 1000000.0

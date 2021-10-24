@@ -9,7 +9,7 @@ import time
 
 # physical limit
 Xlimit = [0, 240]
-Ylimit = [0, 255]
+Ylimit = [0, 259]
 #Zlimit = [0, 160] #[mm]
 Zlimit = [0, 800]
 
@@ -104,14 +104,22 @@ def capture(fCapture, trayID, fWarp = False):
 def move_XY(x, y):
     if (Xlimit[0] <= x <= Xlimit[1]) and (Ylimit[0] <= y <= Ylimit[1]):
         send_cmd('G0X{:.2f}Y{:.2f}'.format(x, y))
+    else:
+        print("X={0:.2f} is out of range ({1:.1f}, {2:.1f})".format(x, Ylimit[0], Ylimit[1]))
+        print("Y={0:.2f} is out of range ({1:.1f}, {2:.1f})".format(y, Ylimit[0], Ylimit[1]))
+
 
 def move_X(pos):
     if Xlimit[0] <= pos <= Xlimit[1]:
         send_cmd('G0X{:.2f}'.format(pos))
+    else:
+        print("X={0:.2f} is out of range ({1:.1f}, {2:.1f})".format(pos, Ylimit[0], Ylimit[1]))
 
 def move_Y(pos):
     if Ylimit[0] <= pos <= Ylimit[1]:
         send_cmd('G0Y{:.2f}'.format(pos))
+    else:
+        print("Y={0:.2f} is out of range ({1:.1f}, {2:.1f})".format(pos, Ylimit[0], Ylimit[1]))
 
 def move_Z(pos):
 #    pos = pos * 5 # Z's [step/mm] = XY's [step/mm] * 5
@@ -155,26 +163,31 @@ def angle_to_horizontal(theta):
     
 def pick(x, y, angle):
     print("pick ({0:.2f}, {1:.2f} / {2:.2f})".format(x, y, angle))
-    #move_Z(config["Physical"]["Height"]["Motion"])
-    move_Z(config["Camera"]["Height"])
+    move_Z(config["Physical"]["Height"]["Motion"])
+    #move_Z(config["Camera"]["Height"])
     move_XY(x, y)
     move_Z(config["Physical"]["Height"]["Pick"])
     intake_control(True)
     time.sleep(0.2)
     move_Z(config["Physical"]["Height"]["Motion"])
     rotate_head(angle_to_horizontal(angle))
+    ## ToDo: wait for head rotate finished
 
-def place(x, y, angle):
-    #print("place ({0:.2f}, {1:.2f} / {2:.2f})".format(x, y, angle))
+def place(x, y, angle, thickness):
+    print("place ({0:.2f}, {1:.2f} / {2:.2f})".format(x, y, angle))
     move_XY(x, y)
-    rotate_head(angle)
-    move_Z(config["Physical"]["Height"]["Place"])
+    #rotate_head(angle)
+    rotate_head(angle_to_horizontal(angle))
+    ## ToDo: wait for head rotate finished
+    #print("place angle=",angle)
+    move_Z(config["Physical"]["Height"]["Place"] + thickness * 5)
     intake_control(False)
     exhaust_control(True)
-    time.sleep(0.2)
+    #time.sleep(0.2)
+    time.sleep(0.5)
     exhaust_control(False)
-    #move_Z(config["Physical"]["Height"]["Motion"])
-    move_Z(config["Camera"]["Height"])
+    move_Z(config["Physical"]["Height"]["Motion"])
+    #move_Z(config["Camera"]["Height"])
 
 def digitize(img, HSV_Range):
     # convert H=(0:180) to (0:360), S&V=(0:100) to (0:255)
@@ -413,19 +426,24 @@ def create_component_list(img, trayID, tray_margin = 0):
 
 def move_dispense(d):
     send_cmd('G0B{:.2f}'.format(d))
-    
-Zdispense = 85      # Z at dispense
-Zdispense_move = 100 # Z at move
-Aextrude = 0.5      # coefficient of extrude per area[mm2]
-Aback = 0.3
 
-def dispense(x, y, area):
+Aextrude = 2                    # coefficient of extrude per area[mm2]
+Aback = 0.8
+
+Zoffset_extrude = 1 # 1/5=0.2mm
+
+def dispense(x, y, area, Zoffset, thickness):
     # dispense solder at (x, y), pad area of "area"
     extrude = area * Aextrude
     back = area * Aback
     print("solder paste at ({0:.3f}, {1:.3f}), area={2:.3f} / extrude={3:.3f}".format(x, y, area, extrude))
     move_XY(x, y)
-    move_Z(Zdispense)
+    move_Z(Zoffset + thickness * 5 + Zoffset_extrude)
     move_dispense(extrude)
     move_dispense(-back)
-    move_Z(Zdispense_move)
+    move_Z(Zoffset + thickness * 5 + 10 + Zoffset_extrude)
+
+def load_board_config(filename = 'board.txt') :
+    print("Loading board config from "+filename)
+    board = json.load(open(filename, 'r'))
+    return board
